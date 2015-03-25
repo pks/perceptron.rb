@@ -18,6 +18,10 @@ T = 1000000            # max number of iterations
 t = 0
 w = SparseVector.new   # 0 vector
 no_change = 0
+save_freq = 1
+if ARGV[1]
+  save_freq = ARGV[1].to_i
+end
 
 while true
 
@@ -30,12 +34,14 @@ while true
 
   train.shuffle!
   loss = 0.0
+  errors = 0
   j = 1
 
   train.each { |x|
     m = w.dot(x)
     if m <= 0.0
       loss += m.abs
+      errors += 1
       w += x
     end
     STDERR.write '.'  if j%10==0
@@ -43,8 +49,7 @@ while true
     j += 1
   }
 
-  STDERR.write "loss = #{loss}\n"
-  t += 1
+  STDERR.write "errors = #{errors} (avg = #{(errors/train.size.to_f).round 2}), loss = #{loss.round 2} (avg = #{(loss/train.size).round 2})\n"
 
   if (loss.abs-prev_loss.abs).abs <= 10**-4
     no_change += 1
@@ -57,11 +62,20 @@ while true
   end
   prev_loss = loss
 
+  if t%save_freq == 0
+    STDERR.write "\nwriting model to model.#{t}.gz ...\n"
+    f = WriteFile.new "model.#{t}.gz"
+    f.write w.to_kv("\t", "\n")+"\n"
+    f.close
+    STDERR.write "done!\n"
+  end
+
+  t += 1
 end
 
-STDERR.write "\nwriting model...\n"
-f = WriteFile.new 'model.gz'
-f.write w.to_kv('=', ' ')+"\n"
+STDERR.write "\nwriting model to model.final.gz ...\n"
+f = WriteFile.new "model.final.gz"
+f.write w.to_kv("\t", "\n")+"\n"
 f.close
 STDERR.write "done!\n"
 
