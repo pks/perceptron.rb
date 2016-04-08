@@ -18,7 +18,22 @@ class KbestItem
   end
 end
 
-w = SparseVector.from_kv ReadFile.new(ARGV[0]).read, /\s/, "\n"
+ws = []
+cs = []
+ReadFile.readlines_strip(ARGV[0]).each { |l|
+  c, s = l.split "\t"
+  cs << c.to_i
+  next if !s||s.strip==""
+  ws << SparseVector.from_kv(s, "=", " ")
+}
+
+def sign(x)
+  if x <= 0
+    return -1.0
+  else
+    return 1.0
+  end
+end
 
 def o kl
   scores = []
@@ -37,7 +52,10 @@ k_sum = 0
 j = 0
 while line = STDIN.gets
   item = KbestItem.new line.strip
-  item.rr = w.dot(item.f)
+  item.rr = 0
+  ws.each_with_index{ |w,j|
+    item.rr += sign(w.dot(x))*cs[j]
+  }
   if item.rank == 0 && cur.size > 0
     o cur
     cur = []

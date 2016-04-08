@@ -14,23 +14,22 @@ class KbestItem
   end
 
   def to_s
-    return "#{@model}\t#{@gold}"
+    return "#{@model}\t#{@gold}\t#{@rank}\t#{@rr}"
   end
 end
 
-w = SparseVector.from_kv ReadFile.new(ARGV[0]).read, /\s/, "\n"
+w = SparseVector.from_kv ReadFile.new(ARGV[0]).read, "\t", "\n"
 
-def o kl
-  scores = []
-  scores << kl.first.gold
-  kl.sort! { |i,j| j.model <=> i.model }
-  scores << kl.first.gold
-  kl.sort! { |i,j| j.rr <=> i.rr }
-  scores << kl.first.gold
-
-  puts scores.join "\t"
+def o kl, j
+  f = WriteFile.new "lists/#{j}.model"
+  g = WriteFile.new "lists/#{j}.rr"
+  kl.each { |i|
+    f.write "#{i.gold}\t#{i.model}\n"
+    g.write "#{i.gold}\t#{i.rr}\n"
+  }
 end
 
+`mkdir -p lists`
 STDERR.write "reranking..\n"
 cur = []
 k_sum = 0
@@ -39,11 +38,11 @@ while line = STDIN.gets
   item = KbestItem.new line.strip
   item.rr = w.dot(item.f)
   if item.rank == 0 && cur.size > 0
-    o cur
+    o cur, j
     cur = []
     j += 1
   end
   cur << item
 end
-o cur
+o cur, j
 
